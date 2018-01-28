@@ -1,0 +1,74 @@
+import requests
+import pyotp
+import json
+API_KEY = ' '
+my_secret = ' '
+#Tworzenie 30 sek kod
+my_token = pyotp.TOTP(my_secret) 
+
+
+def check_balance(API, token):
+    site = requests.get('https://api.opskins.com/IUser/GetBalance/v1/', auth = (API, token.now()))
+    table = site.json()
+    print((table['balance'])/100)
+
+#check_balance(API_KEY, my_token)
+
+#Wyszukiwanie itemu, zwraca 5 cen
+def search_item(API, token):
+    item_name = input("> ")
+    item_name = item_name.replace(' ', '%20')
+    site_name = 'https://api.opskins.com/ISales/Search/v1/?app=730_2&search_item={}'.format(item_name)
+    five_prices = []
+    site = requests.get(site_name, auth = (API, token.now()))
+    table = site.json()
+    item_id = table['response']['sales'][0]['id']
+    print(table['response'])
+    #for i in range(5):
+    #   five_prices.append(float(table['response']['sales'][i]['amount'])/100)
+    five_prices = int(table['response']['sales'][0]['amount'])
+    return  item_id, five_prices
+
+#search_item(API_KEY, my_token)
+
+#Kupowanie
+def Buying(API, token, item, price):
+    
+    print (price, item)
+    payload = {'total': price, 'saleids': item}
+    site_name = "https://api.opskins.com/ISales/BuyItems/v1/"
+    print(site_name)
+    site = requests.post(site_name, data = payload, auth = (API, token.now()))
+    table = site.json()
+    #print(table)
+    return table['response']['items'][0]['new_itemid'] #Potrzebny do withdraw
+
+
+#Wyjmowanie itemu
+def Withdraw(API, token, item_number):
+    payload = {'items' : item_number}
+    site_name = "https://api.opskins.com/IInventory/Withdraw/v1/"
+    site = requests.post(site_name, data = payload, auth = (API, token.now()))
+    table = site.json()
+    #print(table)
+    return table['response']['offers'][0]['tradeoffer_id']
+
+#item, price = search_item(API_KEY, my_token)
+#print(item, price)
+#Withdraw(API_KEY, my_token, Buying(API_KEY, my_token, item, price))
+#Buying(API_KEY, my_token, item, price)
+
+#Sprzedaż
+def Selling(API, token, item, price):
+    
+    item_details = [{'appid' : 730, 'contextid' : 2, 'assetid' : item, 'price' : price}]
+    item_details = json.dumps(item_details)
+    payload = {'items' : item_details}
+    #print(payload)
+    site_name = "https://api.opskins.com/ISales/ListItems/v1/"
+    site = requests.post(site_name, data = payload, auth = (API, token.now()))
+    table = site.json()
+    return table['response']['tradeoffer_id']
+    
+
+#Selling(API_KEY, my_token, 13473554427, 9)
